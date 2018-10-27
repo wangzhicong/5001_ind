@@ -18,7 +18,7 @@ test_filename = 'test.csv'
 # data loader and pre-processer
 dataset = data_loader.data_loader()
 dataset.load_data(train_filename,test_filename)
-steps=['encode']
+steps=['encode','regu']
 for i in steps:
     dataset.preprocess(type=i)
 x,y,test=dataset.get_data()
@@ -30,15 +30,15 @@ x,y,test=dataset.get_data()
 model_trainer = models.model_trainer()
 model = models.nn()
 model_trainer.validation(x,y,model)
-model_trainer.train_model(x,y,model)
+#model_trainer.train_model(x,y,model)
 
-'''
-result = model_trainer.model.predict(test)
+model = models.nn()
+
+result = model.train_prediction(x,y,test)
 result = list(result)
-result = [0 if x<0 else x for x in result]
+result = [0 if x[0]<0 else x[0] for x in result]
 index = list(range(0,len(result)))
 output = {'id':index,'Time':result}
 output = pd.DataFrame(output)
 output = pd.DataFrame(output,columns=['id', 'Time'])
 output.to_csv('rotk_never_give_up.csv',index=False)
-'''

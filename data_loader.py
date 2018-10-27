@@ -21,7 +21,7 @@ class data_loader:
     # load data from file
     def load_data(self,train,test):
         self.x = pd.read_csv(train)
-        self.y = self.x.loc[:,'time'].values
+        self.y = self.x.loc[:,'time'].apply(lambda x:np.log(x)).values
         del self.x['time']
         del self.x['id']
         self.x_test = pd.read_csv(test)
@@ -74,9 +74,6 @@ encoder_num = ['l1_ratio','alpha','max_iter','random_state','n_jobs','n_samples'
 
 
 
-
-from sklearn.ensemble import RandomForestClassifier as rf
-from xgboost.sklearn import XGBClassifier as xgb
 import os
 
 
@@ -137,61 +134,7 @@ def regular(x):
       
     return x
 
-#use models to predict the missing values
-def preprocesser_2x(x):
-    x = x.replace(' ?',str(-1))
-    #
-    encoders = {}
-    for feat in encoder_cate:
-        encoders[feat] = LabelEncoder()
-        x[feat] = encoders[feat].fit_transform(x[feat])
-        if '-1' in list(encoders[feat].classes_):
-            x[feat] = x[feat].replace(encoders[feat].transform([str(-1)])[0],np.nan)  
-    
-    x = x.dropna()
-    return x,encoders
-
-def prediction(x):
-    save_name = 'preprocessed_data/predicting.csv'
-    if os.path.exists(save_name):
-        print('loading %s data' % save_name)
-        x = pd.read_csv(save_name)
-        del x['Unnamed: 0']
-        return x
-    x_drop,encoders = preprocesser_2x(x)
-    x = x.replace(' ?',str(-1))
-    for feat in encoder_cate:
-        x[feat] = encoders[feat].transform(x[feat])
-    
-    for feat in encoder_cate:
-        if '-1' not in list(encoders[feat].classes_):
-            continue
-        print('dealing with %s' % feat)     
-        train = x_drop.copy()
-        f = open('model_params/rf.txt','r')
-        a = f.read()
-        param = eval(a)
-        f.close()
-        model = rf()
-        model.set_params(**param)
-        y_feat = train[feat].values
-        del train[feat]
-        x_feat = train.values
-        model.fit(x_feat,y_feat)
-        test = x.copy()
-        del test[feat]
-        for i in range(len(x[feat])):
-            if x[feat].loc[i] == encoders[feat].transform([str(-1)])[0]:
-                x[feat].loc[i] = model.predict(test.loc[i].values.reshape(1,-1))
-            else:
-                continue
-    
-    x.to_csv(save_name) 
-        
-    return x
-
-
- 
+#use models to predict the missing values 
 #pca, not use      
 def preprocesser_3(x):
     x = x.replace(' ?',np.nan)

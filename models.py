@@ -18,11 +18,12 @@ class model_trainer:
     
     # k fold validation and show the avg accuracy
     def validation(self,x_train,y_train,model):       
+        self.model=model
         kf=KFold(self.fold_number, shuffle=True, random_state=0)
         loss = 0       
         for i, (train_index, test_index) in enumerate(kf.split(x_train)):
             print("Fold",i+1)
-            pred = model.fit(np.array(x_train)[train_index], np.array(y_train)[train_index],np.array(x_train)[test_index],np.array(y_train)[test_index])
+            pred = self.model.fit(np.array(x_train)[train_index], np.array(y_train)[train_index],np.array(x_train)[test_index],np.array(y_train)[test_index])
             loss += pred
         print('accuracy: ', loss/self.fold_number)
     
@@ -42,20 +43,11 @@ import os
 
 class nn:
     def neural_net_model(self,X,input_dim):
-        W_1 = tf.Variable(tf.random_uniform([input_dim,16]))
-        b_1 = tf.Variable(tf.zeros([16]))
-        layer_1 = tf.add(tf.matmul(X,W_1), b_1)
-        layer_1 = tf.nn.relu(layer_1)
-    
-        # layer 1 multiplying and adding bias then activation function
-        W_2 = tf.Variable(tf.random_uniform([16,32]))
-        b_2 = tf.Variable(tf.zeros([32]))
-        layer_2 = tf.add(tf.matmul(layer_1,W_2), b_2)
-        layer_2 = tf.nn.relu(layer_2)
-        # layer 2 multiplying and adding bias then activation function
-        W_O = tf.Variable(tf.random_uniform([32,1]))
-        b_O = tf.Variable(tf.zeros([1]))
-        output = tf.add(tf.matmul(layer_2,W_O), b_O)
+        X = tf.reshape(X,[-1,input_dim])
+        dense = tf.layers.dense(inputs=X,units=64, activation=tf.nn.relu)
+        dense =  tf.layers.dense(inputs=dense,units=32, activation=tf.nn.relu)
+        #dense =  tf.layers.dense(inputs=dense,units=32, activation=tf.nn.relu)
+        output = tf.layers.dense(inputs=dense,units=1, activation=tf.nn.relu)
         
         return output
         
@@ -64,35 +56,36 @@ class nn:
         ys = tf.placeholder("float")
         output = self.neural_net_model(xs,13)
         cost = tf.reduce_mean(tf.square(output-ys))
+        cost2 = tf.reduce_mean(tf.square(tf.exp(output)-tf.exp(ys)))
         # our mean squared error cost function
         trainer = tf.train.GradientDescentOptimizer(0.001).minimize(cost)
         with tf.Session() as sess:
             # Initiate session and initialize all vaiables
             sess.run(tf.global_variables_initializer())
             #saver.restore(sess,'yahoo_dataset.ckpt')
-            for i in range(100):
-                for j in range(x.shape[0]):
-                    sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
-                    # Run cost and train with each sample
-            score = sess.run(cost, feed_dict={xs:x_test,ys:y_test})
+            for i in range(10):
+                #x = np.reshpe([-1,13])
+                sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
+            score = sess.run(cost2, feed_dict={xs:x_test,ys:y_test})
             print('Cost :',score)
             
             return score
         
-    def train_prediction(self,x,y,x_test,):
+    def train_prediction(self,x,y,x_test):
         xs = tf.placeholder("float")
         ys = tf.placeholder("float")
         output = self.neural_net_model(xs,13)
         cost = tf.reduce_mean(tf.square(output-ys))
         # our mean squared error cost function
         trainer = tf.train.GradientDescentOptimizer(0.001).minimize(cost)
+        
         with tf.Session() as sess:
+            
             # Initiate session and initialize all vaiables
             sess.run(tf.global_variables_initializer())
             #saver.restore(sess,'yahoo_dataset.ckpt')
             for i in range(100):
-                for j in range(x.shape[0]):
-                    sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
+                sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
                     # Run cost and train with each sample
             score = sess.run(output, feed_dict={xs:x_test}) 
             return score
