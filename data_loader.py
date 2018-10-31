@@ -38,28 +38,30 @@ class data_loader:
         del self.x['time']
         del self.x['id']
         
+        self.x_test = pd.read_csv(test)
+        del self.x_test['id']
+        self.test_index = self.x_test['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max).values
+        #self.x = self.x.append(self.x_test,ignore_index = True)
+        self.x['n_jobs'] = self.x['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max)
+        #y1 = pd.read_csv('model_params/test_data0.csv')
+        #y1 = y1.loc[:,'time']
+        #self.y = self.y.append(y1,ignore_index = True)
+    
+        
         self.index = self.x['n_jobs'].values
         if self.max > 0:
             for i in range(len(self.y)):
-                if self.index[i] !=-1:
-                    if self.dele:
-                        self.y[i] *= self.index[i]
-                    #pass
-                else:
-                    self.index[i] = self.max
-                    if self.dele:
-                        self.y[i] *= self.index[i]     
+              
+                if self.dele:
+                    self.y[i] *= self.index[i]
             
     
             
         #y = self.y
         #y = self.sc.fit_transform(y.reshape(400,1)).reshape(1,400).tolist()
         #self.y = y
-        self.x_test = pd.read_csv(test)
-        del self.x_test['id']
-        self.test_index = self.x_test['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max).values
         
-    
+        
     # pre-process data with different method
     def preprocess(self,type=0):
         x_len = self.x.shape[0]
@@ -95,6 +97,8 @@ class data_loader:
     #return data for model
     def get_data(self):
         y = self.y.values
+        
+       #y = np.append(y,y1,axis =0)
         x = self.x.copy()
         x_test = self.x_test.copy()
         if type(self.x) == pd.core.frame.DataFrame:
@@ -150,7 +154,7 @@ class pre_wrapper:
 
 
 def aug(x,y):
-    for i in range(2,5):
+    for i in range(2,4):
         import random
         rnd = (1+random.random())
         tmp = x.copy()

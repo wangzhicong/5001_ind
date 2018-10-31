@@ -67,7 +67,7 @@ class model_factory:
             self.models.append((model_type,svm()))
             self.param_grid['svm']={
                     'kernel':['linear','poly','rbf','sigmoid'],
-                    'C':range(30,40,1),
+                    'C':range(10,100,10),
                     'epsilon':[0.01]
                     
                     }
