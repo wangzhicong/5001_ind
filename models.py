@@ -7,7 +7,9 @@ Created on Fri Oct 12 18:23:52 2018
 
 from sklearn.model_selection import KFold
 from sklearn.ensemble import VotingClassifier
-import tensorflow as tf
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.svm import SVR as svm
+from sklearn.svm import LinearSVR as lsvm
 import numpy as np
 
 # object to do train and validation
@@ -17,99 +19,82 @@ class model_trainer:
         self.fold_number=fold_number
     
     # k fold validation and show the avg accuracy
-    def validation(self,x_train,y_train,model):       
-        self.model=model
+    def validation(self,x_train,y_train,model,index,sc):       
         kf=KFold(self.fold_number, shuffle=True, random_state=0)
         loss = 0       
         for i, (train_index, test_index) in enumerate(kf.split(x_train)):
-            print("Fold",i+1)
-            pred = self.model.fit(np.array(x_train)[train_index], np.array(y_train)[train_index],np.array(x_train)[test_index],np.array(y_train)[test_index])
-            loss += pred
-        print('accuracy: ', loss/self.fold_number)
+            #print("Fold",i+1)
+            eclf = model.fit(np.array(x_train)[train_index], np.array(y_train)[train_index])
+            pred = eclf.predict(np.array(x_train)[test_index])
+            #loss += mse(np.true_divide(pred,np.array(index[test_index])),np.true_divide(np.array(y_train)[test_index],np.array(index[test_index])))
+            loss += mse(sc.inverse_transform(pred.reshape(int(400/self.fold_number),1)),sc.inverse_transform(np.array(y_train)[test_index].reshape(400//self.fold_number,1)))
+            #print(pred)
+        print('mse: ', loss/self.fold_number)
     
     # train model for prediction
     def train_model(self,x_train,y_train,model):
         self.model = model
-        self.model.train(x_train,y_train)        
+        self.model.fit(x_train,y_train)        
         
 
 
 from sklearn.linear_model import LinearRegression as lr
+from sklearn.linear_model import RidgeCV as rc
+from sklearn.linear_model import Lasso as la
+from sklearn.neural_network import MLPRegressor as mlp
+
 from sklearn.model_selection import GridSearchCV
 import time
 import os
 
-
-
-class nn:
-    def neural_net_model(self,X,input_dim):
-        X = tf.reshape(X,[-1,input_dim])
-        dense = tf.layers.dense(inputs=X,units=64, activation=tf.nn.relu)
-        dense =  tf.layers.dense(inputs=dense,units=32, activation=tf.nn.relu)
-        #dense =  tf.layers.dense(inputs=dense,units=32, activation=tf.nn.relu)
-        output = tf.layers.dense(inputs=dense,units=1, activation=tf.nn.relu)
-        
-        return output
-        
-    def fit(self,x,y,x_test,y_test):
-        xs = tf.placeholder("float")
-        ys = tf.placeholder("float")
-        output = self.neural_net_model(xs,13)
-        cost = tf.reduce_mean(tf.square(output-ys))
-        cost2 = tf.reduce_mean(tf.square(tf.exp(output)-tf.exp(ys)))
-        # our mean squared error cost function
-        trainer = tf.train.GradientDescentOptimizer(0.001).minimize(cost)
-        with tf.Session() as sess:
-            # Initiate session and initialize all vaiables
-            sess.run(tf.global_variables_initializer())
-            #saver.restore(sess,'yahoo_dataset.ckpt')
-            for i in range(10):
-                #x = np.reshpe([-1,13])
-                sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
-            score = sess.run(cost2, feed_dict={xs:x_test,ys:y_test})
-            print('Cost :',score)
-            
-            return score
-        
-    def train_prediction(self,x,y,x_test):
-        xs = tf.placeholder("float")
-        ys = tf.placeholder("float")
-        output = self.neural_net_model(xs,13)
-        cost = tf.reduce_mean(tf.square(output-ys))
-        # our mean squared error cost function
-        trainer = tf.train.GradientDescentOptimizer(0.001).minimize(cost)
-        
-        with tf.Session() as sess:
-            
-            # Initiate session and initialize all vaiables
-            sess.run(tf.global_variables_initializer())
-            #saver.restore(sess,'yahoo_dataset.ckpt')
-            for i in range(100):
-                sess.run([cost,trainer],feed_dict= {xs:x, ys:y})
-                    # Run cost and train with each sample
-            score = sess.run(output, feed_dict={xs:x_test}) 
-            return score
-        
-
-
-
 # object to select models
+
+
 class model_factory: 
     def __init__(self):
-        self.model = None
+        self.models=[]
         self.param_grid = {}
-        
+       
     # add model and grid search params   
     def add_model(self,model_type):
         if model_type == 'lr':
             self.models.append((model_type,lr(normalize= True)))
+        elif model_type == 'ridge':
+            self.models.append((model_type,rc(normalize= True,cv=None)))
+        elif model_type == 'lasso':
+            self.models.append((model_type,la(normalize= True)))
+        elif model_type == 'svm':
+            self.models.append((model_type,svm()))
+            self.param_grid['svm']={
+                    'kernel':['linear','poly','rbf','sigmoid'],
+                    'C':range(30,40,1),
+                    'epsilon':[0.01]
+                    
+                    }
+        elif model_type == 'mlp':
+            self.models.append((model_type,mlp()))
+            self.param_grid['mlp']={
+                    'hidden_layer_sizes':[(32,32)],
+                    'activation':['identity', 'logistic', 'tanh', 'relu'],
+                    'solver':['lbfgs','adam'],
+                    'alpha':[0.001,0.01],
+                    'learning_rate':['constant', 'invscaling', 'adaptive'],
+                    'learning_rate_init':[0.001,0.01,0.1],
+                    #'early_stopping':[True,False],
+                    #'validation_fraction':[0.1,0.05,0.2],
+                    #'max_iter':[200,1000,2000]
+                    }
+
 
     #set the params for different models after grid search
     def create_model(self,model_type,parameters):
 
         if model_type == 'lr':
             model = lr()
-
+        elif model_type == 'svm':
+            model = svm()
+        elif model_type == 'mlp':
+            model = mlp()
         return  model.set_params(**parameters)
     
     # grid search, if param file exist then directly set param    
@@ -118,9 +103,9 @@ class model_factory:
         self.models = []
         for name,model in model:
             time_str = time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(time.time()))
-            print('%s set parameters for model %s '% (time_str,name))
+            #print('%s set parameters for model %s '% (time_str,name))
             if os.path.exists('model_params/' + name+'.txt'):
-                print('parameter already exists and loading %s model parameters' % name)
+                #print('parameter already exists and loading %s model parameters' % name)
                 f = open('model_params/'+name+'.txt','r')
                 a = f.read()
                 param = eval(a)
@@ -140,3 +125,10 @@ class model_factory:
             self.models.append((name,self.create_model(name,grid_search.best_estimator_.get_params())))
             
             
+    def get_models(self):
+        output = []
+        for i in self.models:
+            #print(i)
+            output.append(i[1])
+            
+        return output
