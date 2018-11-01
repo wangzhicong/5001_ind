@@ -46,6 +46,7 @@ from sklearn.neural_network import MLPRegressor as mlp
 from sklearn.model_selection import GridSearchCV
 import time
 import os
+from xgboost.sklearn import XGBClassifier as xgb
 
 # object to select models
 
@@ -84,6 +85,18 @@ class model_factory:
                     #'validation_fraction':[0.1,0.05,0.2],
                     #'max_iter':[200,1000,2000]
                     }
+        elif model_type == 'xgb':
+            self.models.append((model_type,xgb()))
+            self.param_grid[model_type]={
+                    'max_depth':range(3,10,2),
+                    'min_child_weight':range(1,6,2),
+                    'n_estimators':range(100,1101,200),
+                    'learning_rate':[0.01,0.05,0.1],
+                    'n_jobs': [4],
+                    'reg_alpha': [0,0.005,0.01],
+                    'subsample':[0.8,1],
+                    'colsample_bytree':[0.8,1]
+                    }
 
 
     #set the params for different models after grid search
@@ -95,6 +108,7 @@ class model_factory:
             model = svm()
         elif model_type == 'mlp':
             model = mlp()
+        
         return  model.set_params(**parameters)
     
     # grid search, if param file exist then directly set param    
@@ -113,16 +127,19 @@ class model_factory:
                 self.models.append((name,self.create_model(name,param)))
                 continue
             print('mannually find best parameters for model %s' % name)
-            local_param_grid = self.param_grid[name]
-            grid_search = GridSearchCV(model, param_grid=local_param_grid,verbose=2)
-            start = time.time()
-            grid_search.fit(x,y) 
-            print("GridSearchCV took %.2f seconds for %d candidate parameter settings."
-                  % (time.time() - start, len(grid_search.cv_results_['params'])))
-            f = open('model_params/'+name+'.txt','w')
-            f.write(str(grid_search.best_estimator_.get_params()))
-            f.close()
-            self.models.append((name,self.create_model(name,grid_search.best_estimator_.get_params())))
+            try:
+                local_param_grid = self.param_grid[name]
+                grid_search = GridSearchCV(model, param_grid=local_param_grid,verbose=2)
+                start = time.time()
+                grid_search.fit(x,y) 
+                print("GridSearchCV took %.2f seconds for %d candidate parameter settings."
+                      % (time.time() - start, len(grid_search.cv_results_['params'])))
+                f = open('model_params/'+name+'.txt','w')
+                f.write(str(grid_search.best_estimator_.get_params()))
+                f.close()
+                self.models.append((name,self.create_model(name,grid_search.best_estimator_.get_params())))
+            except:
+                self.models.append((name,model))
             
             
     def get_models(self):

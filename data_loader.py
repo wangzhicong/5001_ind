@@ -7,13 +7,16 @@ Created on Fri Oct 12 18:14:03 2018
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder,LabelBinarizer,OneHotEncoder
-from sklearn.preprocessing import scale,MinMaxScaler,minmax_scale
+from sklearn.preprocessing import scale,MinMaxScaler,minmax_scale,normalize
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import chi2
 from sklearn.feature_selection import SelectKBest
 from scipy.stats import pearsonr
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+import random
 # class for loading data
+
+#del_cat =['random_state','flip_y','scale','n_features','n_classes']
 class data_loader:
     def __init__(self,max=-1,dele = False):
         self.x = None
@@ -23,7 +26,7 @@ class data_loader:
         self.max = max
         self.test_index =None
         self.dele = dele
-        #self.sc = MinMaxScaler(feature_range=(-1,1))
+        #self.sc = MinMaxScaler(feature_range=(0,50))
         self.sc = StandardScaler()
         
     # load data from file
@@ -32,22 +35,36 @@ class data_loader:
         #self.y = self.x.loc[:,'time'].values
         self.y = self.x.loc[:,'time']#.apply(lambda x: x*x)
         self.y = self.y
-        
+         
         #y2 = self.sc.transform(np.array(y))
         #print(y)
         del self.x['time']
         del self.x['id']
+        '''
+        x1 = self.x.copy()
+        x1[double_cat] = x1[double_cat]#.apply(lambda x:x*(1-random.uniform(-0.05,0.05)) )
+        self.x = self.x.append(x1,ignore_index = True)
+        y0 = pd.read_csv('model_params/train_data0.csv')
+        y0 = y0.loc[:,'time']
+        self.y = self.y.append(y0,ignore_index = True)
+        '''
+        
+        
         
         self.x_test = pd.read_csv(test)
         del self.x_test['id']
         self.test_index = self.x_test['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max).values
-        #self.x = self.x.append(self.x_test,ignore_index = True)
-        self.x['n_jobs'] = self.x['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max)
-        #y1 = pd.read_csv('model_params/test_data0.csv')
-        #y1 = y1.loc[:,'time']
-        #self.y = self.y.append(y1,ignore_index = True)
-    
         
+        
+        
+        
+        self.x = self.x.append(self.x_test,ignore_index = True)
+        self.x['n_jobs'] = self.x['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max)
+        y1 = pd.read_csv('model_params/test_data0.csv')
+        y1 = y1.loc[:,'time']#.apply(lambda x:*x)
+        self.y = self.y.append(y1,ignore_index = True)#.apply(lambda x: np.exp(x))
+        
+            
         self.index = self.x['n_jobs'].values
         if self.max > 0:
             for i in range(len(self.y)):
@@ -58,7 +75,7 @@ class data_loader:
     
             
         #y = self.y
-        #y = self.sc.fit_transform(y.reshape(400,1)).reshape(1,400).tolist()
+        #y = self.sc.fit_transform(y.reshape(500,1)).reshape(1,500).tolist()
         #self.y = y
         
         
@@ -122,8 +139,8 @@ encoder_onehot = ['n_jobs']
 encoder_num = ['l1_ratio','alpha','max_iter','random_state','n_samples','n_features','n_classes','n_clusters_per_class','n_informative','flip_y','scale']
 double_cat = ['n_samples']
 
-
-
+times = ['n_samples','n_features','n_classes','n_clusters_per_class','n_informative']
+divides = []
 
 
 from sklearn.ensemble import RandomForestClassifier as rf
@@ -147,15 +164,52 @@ class pre_wrapper:
             return pca(X),y
         elif type == 'aug':
             return aug(X,y)
+        elif type == 'add':
+            return add(X),y
         
         else:
             print('No pre-processer, do nothing')
             return X,y
-
+code= ['l1','elasticnet']
+def add(x):
+    #x['eff'] = x['penalty']
+    #for i in range(len(x['penalty'])):
+    #    x['eff'].loc[i] = x['n_features'].loc[i] if x['penalty'].loc[i] not in code else x['n_informative'].loc[i]
+    count = 2
+    '''
+    for i in x.columns:
+        x[str(count)] = x[i]*x[i]
+        count+=1
+        #x[str(count)] = x[i]
+        #count+=1
+        #x[str(count)] = x[i]*x[i]*x[i]
+        #count+=1
+    '''
+    for i in times:
+        for j in times:
+            x[str(count)] = x[i]*x[j]
+            count +=1
+            for k in times:
+                x[str(count)] = x[i]*x[j]*x[k]
+                count +=1
+    
+                #for m in times:
+                #    x[str(count)] = x[i]*x[j]*x[k]*x[m]
+                #    count +=1
+    #= x ['n_informative'] / x['n_features'] 
+    #x['dum'] = x['penalty'] * x['eff']
+    #x['1'] = x['n_features']*x['n_samples']
+    #x['1'] = x['n_samples'] * x['max_iter'] / x['n_jobs']
+    x['0'] = x['max_iter'] / x['n_jobs']
+    #for i in times:
+    #    x[str(count)] = x[i] / x['n_jobs']
+    #    count +=1
+    #x['3'] = x['n_features'] *x['n_informative']
+    
+    return x
 
 def aug(x,y):
-    for i in range(2,4):
-        import random
+    for i in range(2,3):
         rnd = (1+random.random())
         tmp = x.copy()
         tmp[double_cat] = tmp[double_cat].apply(lambda x : rnd*x)
@@ -190,8 +244,12 @@ def onehot(x):
     return output
 
 #no preprocess, just encode categorical into nums, will not use
+
 def baseline(x):
+    
     for feat in encoder_cate:
+        #x[feat] = LabelEncoder().fit_transform(x[feat])
+        #x[feat] = x[feat].apply(lambda x:'el' if x in code else x  )
         x[feat] = LabelEncoder().fit_transform(x[feat])
         
     
@@ -262,13 +320,8 @@ def prediction(x):
  
 #pca, not use      
 def pca(x):
-    x = x.replace(' ?',np.nan)
-    for i in x.columns:
-        x = x.fillna(str(-1))  
-    for feat in encoder_cate:
-        x[feat] = LabelEncoder().fit_transform(x[feat])
     from sklearn.decomposition import PCA
-    model = PCA(n_components = 'mle',svd_solver = 'full')
+    model = PCA(n_components = 150,svd_solver = 'full')
     x = model.fit_transform(x.values)
     return x
 
