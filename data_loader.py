@@ -13,7 +13,6 @@ from sklearn.feature_selection import chi2
 from sklearn.feature_selection import SelectKBest
 from scipy.stats import pearsonr
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-import random
 from sklearn.preprocessing import PolynomialFeatures as pl
 # class for loading data
 

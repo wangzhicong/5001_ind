@@ -4,13 +4,12 @@ Created on Fri Oct 12 18:13:31 2018
 
 @author: wangz
 """
-import warnings
-warnings.filterwarnings('ignore')
 import data_loader # preprocess 
 import models # model
 import numpy as np
 import pandas as pd
-
+from mlxtend.regressor import StackingRegressor,StackingCVRegressor
+from sklearn.metrics import mean_squared_error as mse
 
 train_filename = 'train.csv'
 test_filename = 'test.csv'
@@ -45,7 +44,7 @@ for k in model:
 model_stack.set_parameters(x,y)
     
 # model fusion part, use stacking
-from mlxtend.regressor import StackingRegressor,StackingCVRegressor
+
 mods = model_stack.get_models()
 sclf  = StackingRegressor(regressors=mods,use_features_in_secondary =True,meta_regressor=mods[0],verbose=0)
 sclf.fit(x,y)
@@ -61,7 +60,7 @@ else:
     
 # cal the mse with the temp best result
 # decide which to submit 
-from sklearn.metrics import mean_squared_error as mse
+
 output = result
 
 baseline = pd.read_csv('eval/19.csv')
