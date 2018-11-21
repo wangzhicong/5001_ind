@@ -152,11 +152,9 @@ class model_factory:
             except:
                 self.models.append((name,model))
             
-            
+    # get list of models for stack    
     def get_models(self):
         output = []
         for i in self.models:
-            #print(i)
-            output.append(i[1])
-            
+            output.append(i[1])        
         return output

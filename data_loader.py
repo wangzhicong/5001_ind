@@ -38,17 +38,16 @@ class data_loader:
         del self.x['time']
         del self.x['id']
         del self.x_test['id']
-
+        #add feature from self generated data
         y0 = pd.read_csv('model_params/train_data0.csv')
         self.x['additional'] = y0['time']
         y1 = pd.read_csv('model_params/test_data0.csv')
         self.x_test['additional'] = y1['time']
         
-        
+        # fill the n_jobs
         self.test_index = self.x_test['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max).values
         self.x['n_jobs'] = self.x['n_jobs'].apply(lambda x: x if x<=self.max and x >0 else self.max)
-        self.index = self.x['n_jobs'].values
-            
+
     def preprocess(self,type=0):
         x_len = self.x.shape[0]
         if type != 'aug':
@@ -77,9 +76,7 @@ class data_loader:
         
         return x,y,x_test,self.test_index
 
-#age	workclass	fnlwgt	education	education-num	Marital-status	occupation	relationship	race	sex	capital-gain	capital-loss	hours-per-week	native-country
 
-#two different kinds of attributes
 encoder_cate = ['penalty']
 encoder_onehot = ['n_jobs']
 encoder_num = ['l1_ratio','alpha','max_iter','n_samples','n_features','n_classes','n_clusters_per_class','n_informative']
@@ -89,9 +86,7 @@ times = ['max_iter','n_samples','n_classes','0']
 divides = ['l1_ratio','alpha','max_iter','random_state','n_samples']
 
 
-from sklearn.ensemble import RandomForestClassifier as rf
-
-        
+# different pre-processing method      
 class pre_wrapper:
     def get(self,type,X,y):
         if type == 'encode':
@@ -107,34 +102,30 @@ class pre_wrapper:
         else:
             print('No pre-processer, do nothing')
             return X,y
-code= ['l1','elasticnet']
 
 def regular(x):
-    #for i in d:
     for i in x.columns:
-        #if i!='additional':
         x[i] = x[[i]].apply(scale)  
-      
+ 
     return x
 
 
-
+# use poly to generate new features
 def poly(x):
     t = x.values
     t = pl(degree=3,interaction_only=True).fit_transform(t)
     
     return t
 
-
+# add features
 def add(x):
-    x['9'] = x['n_classes'] * x['n_clusters_per_class']
+    
     #x['feature_1'] = x['max_iter'] * x['n_samples'] * x['n_features'] * x['n_classes'] / x['n_jobs']
     del x['random_state']
     del x['flip_y']
     del x['scale']
     #del x['penalty']
     #del x['n_samples']
-    
     #del x['alpha']
     #del x['l1_ratio']
     #del x['n_informative']
@@ -146,16 +137,14 @@ def add(x):
     #x['6'] = x['n_samples'] * x['n_features']
     #x['7'] =  x['n_samples'] /x['n_classes'] 
     #x['8'] = x['n_classes'] * x['max_iter']
-    
+    x['9'] = x['n_classes'] * x['n_clusters_per_class']
     #del x['n_classes']
     #del x['n_clusters_per_class']
-    
-
     #x['1'] = x['n_samples'] * x['max_iter'] / x['n_jobs']
     #x['0'] = x['max_iter'] / x['n_jobs']
     return x
     
-                
+# encode             
 def baseline(x):
     '''
     shape = len(x)
@@ -171,15 +160,6 @@ def baseline(x):
 
     return x
        
-def regular(x):
-    #for i in d:
-    for i in x.columns:
-        #if i!='additional':
-        x[i] = x[[i]].apply(scale)  
-      
-    return x
-
-#use models to predict the missing values
 
 #pca, not use      
 def pca(x):
