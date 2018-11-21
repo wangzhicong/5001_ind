@@ -42,11 +42,11 @@ from sklearn.linear_model import LinearRegression as lr
 from sklearn.linear_model import RidgeCV as rc
 from sklearn.linear_model import Lasso as la
 from sklearn.neural_network import MLPRegressor as mlp
-
+from sklearn.ensemble import RandomForestRegressor as rf
 from sklearn.model_selection import GridSearchCV
 import time
 import os
-from xgboost.sklearn import XGBClassifier as xgb
+from xgboost.sklearn import XGBRegressor as xgb
 
 # object to select models
 
@@ -67,7 +67,7 @@ class model_factory:
         elif model_type == 'svm':
             self.models.append((model_type,svm()))
             self.param_grid['svm']={
-                    'kernel':['linear','poly','rbf','sigmoid'],
+                    'kernel':['rbf'],
                     'C':range(10,100,10),
                     'epsilon':[0.01]
                     
@@ -75,7 +75,7 @@ class model_factory:
         elif model_type == 'mlp':
             self.models.append((model_type,mlp()))
             self.param_grid['mlp']={
-                    'hidden_layer_sizes':[(32,32)],
+                    'hidden_layer_sizes':[(16,16,16,16,16),(16,16,16,16)],
                     'activation':['identity', 'logistic', 'tanh', 'relu'],
                     'solver':['lbfgs','adam'],
                     'alpha':[0.001,0.01],
@@ -88,14 +88,22 @@ class model_factory:
         elif model_type == 'xgb':
             self.models.append((model_type,xgb()))
             self.param_grid[model_type]={
-                    'max_depth':range(3,10,2),
+                    'max_depth':range(5,15,2),
                     'min_child_weight':range(1,6,2),
-                    'n_estimators':range(100,1101,200),
+                    'n_estimators':range(10,50,10),
                     'learning_rate':[0.01,0.05,0.1],
                     'n_jobs': [4],
                     'reg_alpha': [0,0.005,0.01],
                     'subsample':[0.8,1],
                     'colsample_bytree':[0.8,1]
+                    }
+        elif model_type == 'rf':
+            self.models.append((model_type,rf()))
+            self.param_grid[model_type]={
+                    'n_estimators':[10,100,500],
+                    #'max_depth':range(3,10,2),
+                    #'min_child_weight':range(1,6,2),
+                    #'learning_rate':[0.01,0.05,0.1]
                     }
 
 
@@ -108,7 +116,10 @@ class model_factory:
             model = svm()
         elif model_type == 'mlp':
             model = mlp()
-        
+        elif model_type == 'rf':
+            model = rf()
+        elif model_type == 'xgb':
+            model = xgb()
         return  model.set_params(**parameters)
     
     # grid search, if param file exist then directly set param    
@@ -129,7 +140,7 @@ class model_factory:
             print('mannually find best parameters for model %s' % name)
             try:
                 local_param_grid = self.param_grid[name]
-                grid_search = GridSearchCV(model, param_grid=local_param_grid,verbose=2)
+                grid_search = GridSearchCV(model, param_grid=local_param_grid,verbose=2,scoring = 'mse')
                 start = time.time()
                 grid_search.fit(x,y) 
                 print("GridSearchCV took %.2f seconds for %d candidate parameter settings."
