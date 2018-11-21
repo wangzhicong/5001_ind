@@ -1,6 +1,6 @@
 # 5001 individual project
 ## language
-* python
+* python3
 ## pre-requist
 * numpy
 * pandas
