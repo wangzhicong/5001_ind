@@ -1,7 +1,7 @@
 # 5001 individual project
 ## language
 * python3
-## pre-requist
+## prerequisite
 * numpy
 * pandas
 * mlxtend
