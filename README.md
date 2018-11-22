@@ -8,6 +8,7 @@
 * sklearn
 * scipy
 * xgboost
+* tqdm
 ## usage
 * run main.py in qtconsole
 * python main.py on linux
